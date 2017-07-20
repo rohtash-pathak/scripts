@@ -1,0 +1,23 @@
+- name: Deploying undercloud
+  hosts: all
+  become: true
+  remote_user: stack
+  tasks:
+  - name: Red Hat Subscription Manager Registeration
+    command: subscription-manager register  --username=jo@example.com subscription-manager register  --password=MyKul22pwd
+
+  - name: Auto attach redhat manager subscription
+    command: subscription-manager auto-attach --enable 
+
+  - name: Disable repos
+    command: subscription-manager repos --disable=* 
+
+  - name: Enable redhat repos
+    command: subscription-manager repos --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-server-openstack-10-rpms 
+
+  - name: Yum update
+    command: yum update -y
+  
+  roles:
+    - Director
+

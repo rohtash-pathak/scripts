@@ -1,0 +1,52 @@
+- name: Deploying undercloud
+  hosts: all
+  become: true
+  tasks:
+#  - name: Setting hostname
+#    hostname: name=ucloud.jiolabs.com
+  - name: updating onboot option
+    lineinfile: dest=/etc/sysconfig/network-scripts/ifcfg-eth0 regexp={{ item.regexp }} line={{ item.line}}
+    with_items:  
+    - { regexp: "^ONBOOT" ,line: "ONBOOT=yes" }
+    - { regexp: "^IPADDR" , line: "IPADDR=192.168.0.1" }
+    - { regexp: "^NETMASK", line: "NETMASK=255.255.255.0" }
+    - { regexp: "^GATEWAY" , line: "GATEWAY=192.168.0.4" }
+
+#  - name: Disabling firewalld service
+#    service: name=firewalld state=stopped
+
+  - name: setting yum repo
+    script: repo.sh   
+
+  - name: Installing NTP server
+    yum: name=ntp state=installed
+
+  - name: Remove NTP Servers
+    lineinfile: path=/etc/ntp.conf state=absent regexp=^server
+
+  - name: Configure NTP server
+    lineinfile: dest=/etc/ntp.conf line="server 172.16.56.136"
+
+  - name: Adding stack user
+    action: user name=stack password=stack
+ 
+  - name: Creating .ssh directotry
+    file: path=/home/stack/.ssh state=directory mode=700 owner=stack group=stack
+
+  - name: Copy public key in stack home directory 
+    copy: dest=/home/stack/.ssh/authorized_keys content="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDEsiGJ5YgaTSnUajsuy1fG9AQ2/uuXhJL/jeaFp18XQ6LswpxeSVncYCEQDYJBu4Jg0Ia3qfdzi5pbiGqEtgpHNb0JDGDslRdFgOMUfIib5YSMDzL7caASMqYNXNO0lwCiNSo73qcqg5Qa/hFUKpdcMKG+7mKAHxLvaSN75GUPbYhqL5hEBH6oVcQSQc1PMIPTyP2fK/B23XfuW1UvI/7XnMRwBDZCvZJ55NO66qanj4Q+BK+IreECRI+UoBln0pjYRqVMz3uCOAiTXabf4ocb17TM+WR1g+VCtxuOZ7h7WvXPmpN6JK9W5l3HsOewar7T/7Jf7aPkGkjWIbl517eX centos@ip-10-1-1-7" mode=600 owner=stack group=stack
+
+  - name: Create stack file
+    copy: content="stack ALL=(root) NOPASSWD:ALL"  dest=/etc/sudoers.d/stack   mode=0440 
+
+  - name: Creating stack Directories
+    command: mkdir -p /home/stack/{{ item }}
+    with_items: 
+    - images
+    - templates
+
+  - name: Setting up DNS Entry in /etc/resolv.conf
+    lineinfile: dest=/etc/resolv.conf line="nameserver 8.8.8.8"
+
+- name: Installing the Under Cloud 
+  include: part2.yaml
